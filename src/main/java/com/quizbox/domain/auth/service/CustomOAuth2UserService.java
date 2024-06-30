@@ -1,8 +1,9 @@
 package com.quizbox.domain.auth.service;
 
-import com.quizbox.domain.auth.dto.GoogleRes;
-import com.quizbox.domain.auth.dto.NaverRes;
-import com.quizbox.domain.auth.dto.OAuth2Res;
+import com.quizbox.domain.auth.dto.*;
+import com.quizbox.domain.user.domain.User;
+import com.quizbox.domain.user.domain.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -10,7 +11,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
+
+    private final UserRepository userRepository;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -33,6 +37,41 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             return null;
         }
 
-        // 로그인 완료 후 처리할 로직은 추후 작성
+
+        String username = oAuth2Res.getProvider() + "." + oAuth2Res.getProviderId();
+
+        User existUser = userRepository.findByUsername(username);
+
+        if (existUser == null) {
+
+            User user = User.builder()
+                    .username(username)
+                    .email(oAuth2Res.getEmail())
+                    .name(oAuth2Res.getName())
+                    .role("ROLE_USER")
+                    .build();
+
+            userRepository.save(user);
+
+            UserDTO userDTO = new UserDTO(username, oAuth2Res.getName(), "ROLE_USER");
+
+            return new CustomOAuth2User(userDTO);
+
+        } else {
+
+            existUser.updateEmail(oAuth2Res.getEmail());
+            existUser.updateName(oAuth2Res.getName());
+
+            userRepository.save(existUser);
+
+            UserDTO userDTO = new UserDTO(username, oAuth2Res.getName(), "ROLE_USER");
+
+            return new CustomOAuth2User(userDTO);
+        }
+
+
+
+
+
     }
 }
