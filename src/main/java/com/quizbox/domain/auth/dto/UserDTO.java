@@ -1,5 +1,8 @@
 package com.quizbox.domain.auth.dto;
 
+import lombok.Builder;
+
+@Builder
 public record UserDTO(
         String role,
         String name,
