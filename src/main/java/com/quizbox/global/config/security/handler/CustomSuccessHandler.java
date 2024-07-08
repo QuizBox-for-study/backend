@@ -1,5 +1,7 @@
 package com.quizbox.global.config.security.handler;
 
+import com.quizbox.domain.auth.domain.Token;
+import com.quizbox.domain.auth.domain.repository.TokenRepository;
 import com.quizbox.domain.auth.dto.CustomOAuth2User;
 import com.quizbox.global.config.security.jwt.JWTUtil;
 import jakarta.servlet.ServletException;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 
 @Component
@@ -21,6 +24,7 @@ import java.util.Iterator;
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JWTUtil jwtUtil;
+    private final TokenRepository tokenRepository;
 
 
     @Override
@@ -41,6 +45,10 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         response.addCookie(createCookie("Authorization", access));
         response.addCookie(createCookie("refresh", refresh));
+
+        // Refresh 토큰 저장
+        addRefreshEntity(username, refresh, 86400000L);
+
         response.sendRedirect("http://localhost:3000/");
     }
 
@@ -53,5 +61,19 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         cookie.setHttpOnly(true);
 
         return cookie;
+    }
+
+    private void addRefreshEntity(String username, String refreshToken, Long expiredMs) {
+
+        Date date = new Date(System.currentTimeMillis() + expiredMs);
+
+        Token token = Token.builder()
+                .refreshToken(refreshToken)
+                .username(username)
+                .expiration(expiredMs)
+                .build();
+
+        tokenRepository.save(token);
+
     }
 }
